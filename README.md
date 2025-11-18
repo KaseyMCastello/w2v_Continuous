@@ -1,3 +1,4 @@
+[![DOI](https://zenodo.org/badge/803897014.svg)](https://doi.org/10.5281/zenodo.17640320)
 ## animal2vec: A self-supervised transformer for rare-event raw audio input
 
 This is the official repository for [animal2vec](https://arxiv.org/abs/2406.01253#):

@@ -7,6 +7,7 @@
 Data pre-processing for the Meerkat data within the CCAS project.
 """
 import os
+import shutil
 import h5py
 import argparse
 import librosa
@@ -20,7 +21,7 @@ from pathlib import Path
 from datetime import timedelta, datetime
 import multiprocessing
 from functools import partial
-from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
+from concurrent.futures import ThreadPoolExecutor
 # Define a custom argument type for a list of strings
 def list_of_strings(arg):
     return arg.split(',')
@@ -94,6 +95,9 @@ def get_parser():
                        "If you are not providing this file the "
                        "zeroth channel will be used per default"
     )
+    parser.add_argument("--num-subfolders", type=int, required=False, help="Number of subfolders to create in output folder."
+                        "This is useful when dealing with a large number of files to avoid ""too many files in a single folder. "
+                        "If not provided, will use the default file structure for non anonymised data and one single folder for anonymised data.")
     return parser
 
 
@@ -124,6 +128,7 @@ def iteration(file, args, id_generator, labels, channel_dict):
         metadata = sf.info(audio_filename)
     except sf.LibsndfileError as e:
         print("{} is corrupt and raised a LibsndfileError. We skip it.".format(audio_filename), flush=True)
+        print(e, flush=True)
         return total_duration, c_, random_names_dictionary
     if len(waveform) == 0:
         print("{} is corrupt and has a length of zero. We skip it.".format(audio_filename), flush=True)
@@ -145,15 +150,6 @@ def iteration(file, args, id_generator, labels, channel_dict):
             waveform = waveform[:, 0].squeeze()
 
     resample_cond = metadata.samplerate != args.resample_rate or metadata.channels != 1
-
-    # Prepare the base filename for output
-    # if files were structured in multiple nested folders, then encode
-    # this into the new filename starting from the base input folder
-    base_out_filename = os.path.dirname(audio_filename).replace(os.sep, "_").replace("-", "_").lower()
-    if base_out_filename.startswith("_"):
-        base_out_filename = base_out_filename[1:]
-    # TODO: input_path is a list ... len is always 1, or 2, or so
-    base_out_filename = base_out_filename[len(args.input_folder):]
 
     # Split the file
     # TODO: When max(waveform.shape) == segment_length_sec * sample_rate nothing happens
@@ -178,20 +174,29 @@ def iteration(file, args, id_generator, labels, channel_dict):
         f_name_base = "{}_{:05.0f}s_{:05.0f}s".format(os.path.basename(audio_filename)[:-4],
                                                       from_sec, to_sec)
         if args.randomize_file_names:
+            out_folders_list = [str(i) for i in range(args.num_subfolders)] if args.num_subfolders else [""]
+            base_out_filename = random.choice(out_folders_list)
             _new_rand_name = id_generator()
             if _new_rand_name in random_names_dictionary:
                 while _new_rand_name in random_names_dictionary:  # Create a new name until it is unique
                     _new_rand_name = id_generator()
-            random_names_dictionary.update({_new_rand_name: f_name_base})
+            random_names_dictionary.update({os.path.join(base_out_filename, _new_rand_name): f_name_base})
             f_name_base = _new_rand_name
-            out_folder_wav = os.path.join(out_folder, "wav", "{:05.0f}Hz".format(args.resample_rate))
-            out_folder_lbl = os.path.join(out_folder, "lbl", "{:05.0f}Hz".format(args.resample_rate))
+        
         else:
-            out_folder_wav = os.path.join(out_folder, "wav", "{:05.0f}Hz".format(args.resample_rate),
-                                          base_out_filename)
-            out_folder_lbl = os.path.join(out_folder, "lbl", "{:05.0f}Hz".format(args.resample_rate),
-                                          base_out_filename)
-
+            # Prepare the base filename for output
+            # if files were structured in multiple nested folders, then encode
+            # this into the new filename starting from the base input folder
+            base_out_filename = os.path.dirname(audio_filename).replace(os.sep, "_").replace("-", "_").lower()
+            if base_out_filename.startswith("_"):
+                base_out_filename = base_out_filename[1:]
+            # TODO: input_path is a list ... len is always 1, or 2, or so
+            base_out_filename = base_out_filename[len(args.input_folder):]
+            
+        out_folder_wav = os.path.join(out_folder, "wav", "{:05.0f}Hz".format(args.resample_rate),
+                                        base_out_filename)
+        out_folder_lbl = os.path.join(out_folder, "lbl", "{:05.0f}Hz".format(args.resample_rate),
+                                        base_out_filename)
         f_name_wav = f_name_base + ".wav"
 
         if not os.path.isdir(out_folder_wav):
@@ -263,6 +268,8 @@ def main(args):
             # Not gonna happen.
             return ''.join(random.SystemRandom().choice(chars) for _ in range(size))
 
+        # Remove all folders in output folder to avoid writing the same files twice
+        shutil.rmtree(args.output_folder)
     else:
         id_generator = None
 
@@ -313,14 +320,13 @@ def main(args):
     tot_num_files = 0
     random_names_dicts = []
     with tqdm(total=len(files)) as pbar:
-        # Streamed execution to prevent memory overload
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
             for total_dur, c_, rand_dict in tqdm(
                     executor.map(partial_iteration, files),
                     total=len(files)):
         
                 total_duration += sum(total_dur)
-                tot_num_files += sum(c_)
+                tot_num_files += c_
                 random_names_dicts.append(rand_dict)
                 pbar.update(1)
     random_names_dictionary = {k: v for d in random_names_dicts for k, v in d.items()}
@@ -337,10 +343,11 @@ def main(args):
                 f.write("\t".join([k, v]) + "\n")  # write dictionary -> tab separated
 
     print("Total duration of all calls in all files: {:02.02f}s".format(np.sum(total_duration)), flush=True)
-    print("Total number of all files: {:02.00f}".format(len(total_duration)), flush=True)
+    print("Total number of all files: {:02.00f}".format(total_duration), flush=True)
 
 
 if __name__ == "__main__":
+    random.seed(10)
     parser = get_parser()
     args = parser.parse_args()
     main(args)

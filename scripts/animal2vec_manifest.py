@@ -167,27 +167,26 @@ def get_files_indices_one_individual(
     Gets the indices of all files that belong to one individual
     """
     if not id_lookup_file_path:
-        indices = [
+        indices_indiv = [
             i
             for i in range(len(labels_X))
             if individual.lower() in Path(labels_X[i]).stem.lower()
         ]
         print(
-            f"Found {len(indices)} files for individual {individual} based on file name matching."
+            f"Found {len(indices_indiv)} files for individual {individual} based on file name matching."
         )
     else:
-        lookup_file_df = pd.DataFrame(pd.read_csv(id_lookup_file_path))
-        # TODO: return the list of indexes based on the lookup file
-        decoded_file_names_df = lookup_file_df[
-            lookup_file_df["individual_id"] == individual
-        ]["file_name"]
-        encoded_file_names = decoded_file_names_df["encoded_file_name"].tolist()
-        indices = [
-            i
-            for i in range(len(labels_X))
-            if any(encoded_name in labels_X[i] for encoded_name in encoded_file_names)
-        ]
-    return indices
+        lookup_file_df = pd.DataFrame(pd.read_csv(id_lookup_file_path, sep="\t"))
+        lookup_file_df_one_indiv = lookup_file_df[lookup_file_df['OriginalName'].str.contains(f"_{individual}")]
+        randomised_file_names = lookup_file_df_one_indiv['RandomizedName'].tolist()
+        indices_indiv = []
+        for file_name in randomised_file_names:
+            idx_file_name = [i for i in range(len(labels_X)) if file_name in labels_X[i]]
+            assert len(idx_file_name) <= 1
+            if idx_file_name:
+                indices_indiv.append(idx_file_name[0])
+
+    return indices_indiv
 
 
 def split_train_valid_by_individuals(

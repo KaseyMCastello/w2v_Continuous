@@ -88,17 +88,11 @@ def get_parser():
         "Will be ignored when leave-p-out is set.",
     )
     parser.add_argument(
-        "--exclude-from-finetune-individuals",
-        type=str,
-        default="",
-        nargs="+",
-        help="Individuals to exclude from the fine-tuning phase entirely",
-    )
-    parser.add_argument(
         "--id-lookup-file-path",
         type=str,
         default="",
-        help="File path that maps randomised file names to their non-randomised individual IDs. Will be used only when valid-set-individuals is set.",
+        help="File path that maps randomised file names to their non-randomised name which include individual information."
+        "Will be used only when valid-set-individuals is set.",
     )
 
     return parser
@@ -135,29 +129,6 @@ def get_files(dir, re_obj=None):
 def flatten(l):
     """helper function for flattening a list of lists"""
     return [item for sublist in l for item in sublist]
-
-
-def remove_excluded_individuals(
-    labels_X: List[str],
-    targets: List[str],
-    exclude_individuals: List[str],
-    id_lookup_file_path: Path = "",
-) -> Tuple[List[str], List[int]]:
-    """
-    Removes all files that belong to excluded individuals
-    """
-    exclude_indices = []
-    for individual in exclude_individuals:
-        idx_ind_exclude = get_files_indices_one_individual(
-            individual, labels_X, id_lookup_file_path
-        )
-        exclude_indices.extend(idx_ind_exclude)
-
-    include_indices = list(set(range(len(labels_X))) - set(exclude_indices))
-    included_labels_X = [labels_X[i] for i in include_indices]
-    included_targets = [targets[i] for i in include_indices]
-
-    return included_labels_X, included_targets
 
 
 def get_files_indices_one_individual(
@@ -353,17 +324,6 @@ def main(args):
             continue
         line = "{}\t{}".format(os.path.relpath(file_path, dir_path), frames)
         print(line, file=pretrain_f)
-
-    if args.exclude_from_finetune_individuals:
-        print(
-            f"Excluding individuals {args.exclude_from_finetune_individuals} from the fine-tuning phase entirely."
-        )
-        labels_X, targets = remove_excluded_individuals(
-            labels_X,
-            targets,
-            args.exclude_from_finetune_individuals,
-            args.id_lookup_file_path,
-        )
 
     if not args.valid_set_individuals:
         sss = MultilabelStratifiedShuffleSplit(

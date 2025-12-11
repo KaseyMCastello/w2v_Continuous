@@ -96,8 +96,12 @@ def get_parser():
                        "zeroth channel will be used per default"
     )
     parser.add_argument("--num-subfolders", type=int, required=False, help="Number of subfolders to create in output folder."
-                        "This is useful when dealing with a large number of files to avoid ""too many files in a single folder. "
-                        "If not provided, will use the default file structure for non anonymised data and one single folder for anonymised data.")
+                        "This is useful when dealing with a large number of files to avoid having too many files in a single folder."
+                        "If not provided, we will use the default file structure for non anonymised data and one single folder for anonymised data."
+    )
+    parser.add_argument(
+        "--seed", default=1612, type=int, metavar="N", help="random seed"
+    )                   
     return parser
 
 
@@ -347,7 +351,7 @@ def main(args):
 
 
 if __name__ == "__main__":
-    random.seed(10)
     parser = get_parser()
     args = parser.parse_args()
+    random.seed(args.seed)
     main(args)

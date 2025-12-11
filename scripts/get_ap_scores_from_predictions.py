@@ -21,9 +21,17 @@ def remove_empty_rows(
     predictions: NDArray, targets: NDArray
 ) -> Tuple[NDArray, NDArray]:
     """
-    When saving the predictions, the predictions and targets are interpolated with a lot of empty predictions,
-    which makes the predictions and the targets unnecessarily big. Remove rows where all target values are zero.
+    When saving the predictions, the predictions and targets are interpolated with a lot of empty predictions.
+    This makes the predictions and the targets very large, and slows down the calculation of the average precision. 
+    This function removes rows where all target values are zero; this doesn't affect the average precision calculation.
     This assumes that the targets have at least one positive class for each audio clip (eg row).
+    
+    Args:
+        predictions (NDArray): Array of shape (num_segments, num_classes) containing the predictions.
+        targets (NDArray): Array of shape (num_segments, num_classes) containing target labels.
+    Returns:
+        Tuple[NDArray, NDArray]: Filtered predictions and targets with empty rows removed.
+
     """
     non_empty_indices = np.where(targets.sum(axis=1) != 0)[0]
     return predictions[non_empty_indices], targets[non_empty_indices]
@@ -32,6 +40,14 @@ def remove_empty_rows(
 def get_predictions(
     predictions_path: str, segmented: bool = True
 ) -> Tuple[NDArray, NDArray]:
+    """
+    Reads the predictions and targets from the h5 created by the get_results_for_single_manifest.py script.
+    Args:
+        predictions_path (str): Path to the h5 file containing predictions and targets.
+        segmented (bool): Whether to read segmented predictions/targets or framewise ones.
+    Returns:
+        Tuple[NDArray, NDArray]: Arrays containing predictions and targets.
+    """
     predictions = []
     targets = []
 
@@ -53,19 +69,19 @@ def get_predictions(
     return predictions, targets
 
 
-def get_tot_duration_vocalizations(targets: NDArray, sample_rate: int) -> List[float]:
+def get_tot_duration_vocalizations(targets: NDArray, targets_sample_rate: int) -> List[float]:
     """
-    Calculate the total duration of vocalizations in seconds.
+    Calculate the total duration of vocalizations in minutes.
 
     Args:
-        targets (NDArray): Array of shape (num_segments, num_classes) containing target labels.
-        sample_rate (float): Sample rate of the audio in Hz. Default is 24000 Hz.
+        targets (NDArray): Array containing target labels.
+        target_sample_rate (int): Sample rate of the targets array.
 
     Returns:
-        float: Total duration of vocalizations in seconds.
+        List[float]: The list of the total durations of all the vocalization types in minutes.
     """
     num_vocalization_frames = np.sum(targets, axis=0)
-    total_duration_min = num_vocalization_frames / (sample_rate * 60)
+    total_duration_min = num_vocalization_frames / (targets_sample_rate * 60)
     return np.round(total_duration_min, 1).tolist()
 
 
@@ -74,12 +90,14 @@ def get_results_from_predictions(
     unique_labels: List[str],
     sample_rate: int = 200,
     output_file_path: Optional[str] = None,
-):
+) -> pd.DataFrame:
     """
-    Reads predictions from a file and processes them to generate results.
+    Reads predictions from a h5 file and processes them to generate an average precision table.
 
     Args:
         predictions_file_path (str): h5 path to the file containing predictions. The predictions should be obtained by running the get_results_for_single_manifest.py script with the flag --export-predictions set to True.
+        unique_labels (List[str]): List of the vocalization types labels used in the predictions.
+        sample_rate (int): Sample rate of the targets in the predictions file.
         output_file_path (Optional[str]): Path to save the processed results. If None, returns the results as a pandas DataFrame
     Returns:
         pd.DataFrame: Processed results
@@ -143,19 +161,17 @@ if __name__ == "__main__":
     parser.add_argument(
         "--unique-labels",
         type=str,
-        help="A string list that, when evaluated, holds the names for the used classes.",
+        help="A string list that contains the names of the vocalization types.",
     )
     parser.add_argument(
         "--output-file-path",
         type=str,
         default=None,
-        help="Path to save the results csv file. If not provided, the results will not be saved to a file.",
+        help="Path to save the results as a csv file. If not provided, the results will not be saved.",
     )
-    prediction_file_path = "/home/jupyter-cangonin/eas_shared/meerkat/working/animal2vec/Coati_2025-03-17_10s_randomized/predictions_Wav2VecCcasFinetune_2025-10-28_16-01-09_hyena_ft_full-0_825-4.pt_0_16_valid_0_animal2vec.h5"
     args = parser.parse_args()
-    print(args)
     get_results_from_predictions(
-        predictions_file_path=prediction_file_path,
+        predictions_file_path=args.predictions_file_path,
         unique_labels=ast.literal_eval(args.unique_labels),
-        output_file_path="/home/jupyter-cangonin/github/self-supervised-animal-vocalizations/data/results_new_hyena_model.csv",
+        output_file_path=args.output_file_path,
     )

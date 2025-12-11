@@ -97,7 +97,8 @@ def get_parser():
     )
     parser.add_argument("--num-subfolders", type=int, required=False, help="Number of subfolders to create in output folder."
                         "This is useful when dealing with a large number of files to avoid having too many files in a single folder."
-                        "If not provided, we will use the default file structure for non anonymised data and one single folder for anonymised data."
+                        "Only active when --randomize-file-names is True. If not provided, all the files will be put into one single folder."
+                        ""
     )
     parser.add_argument(
         "--seed", default=1612, type=int, metavar="N", help="random seed"
@@ -181,8 +182,8 @@ def iteration(file, args, id_generator, labels, channel_dict):
             out_folders_list = [str(i) for i in range(args.num_subfolders)] if args.num_subfolders else [""]
             base_out_filename = random.choice(out_folders_list)
             _new_rand_name = id_generator()
-            if _new_rand_name in random_names_dictionary:
-                while _new_rand_name in random_names_dictionary:  # Create a new name until it is unique
+            if os.path.join(base_out_filename, _new_rand_name) in random_names_dictionary:
+                while os.path.join(base_out_filename, _new_rand_name) in random_names_dictionary:  # Create a new name until it is unique
                     _new_rand_name = id_generator()
             random_names_dictionary.update({os.path.join(base_out_filename, _new_rand_name): f_name_base})
             f_name_base = _new_rand_name

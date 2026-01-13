@@ -336,6 +336,7 @@ class FileAudioLabelDataset(RawAudioDataset, ABC):
         b, a = butter(N=4, Wn=wn, btype="highpass")
         wav = filtfilt(b, a, wav, axis=0)
 
+        #feats = torch.from_numpy(wav).float()
         feats = torch.from_numpy(np.ascontiguousarray(wav)).float()
         feats = self.postprocess(feats, curr_sample_rate)
         data_dict = {"id": index, "source": feats}

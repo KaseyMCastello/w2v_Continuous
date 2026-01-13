@@ -15,7 +15,7 @@ import warnings
 from abc import ABC
 import torch
 import numpy as np
-
+from scipy.signal import butter, filtfilt
 from argparse import Namespace
 from dataclasses import dataclass, field
 from typing import Optional
@@ -328,6 +328,13 @@ class FileAudioLabelDataset(RawAudioDataset, ABC):
             path_or_fp = io.BytesIO(byte_data)
 
         wav, curr_sample_rate = sf.read(path_or_fp, dtype="float32")
+
+        #Try high-pass filtering to remove low freq noise
+        hp_cutoff = 4000.0  # Hz
+        nyq = 0.5 * curr_sample_rate
+        wn = hp_cutoff / nyq
+        b, a = butter(N=4, Wn=wn, btype="highpass")
+        wav = filtfilt(b, a, wav, axis=0)
 
         feats = torch.from_numpy(wav).float()
         feats = self.postprocess(feats, curr_sample_rate)

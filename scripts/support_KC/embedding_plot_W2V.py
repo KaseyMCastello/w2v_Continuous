@@ -10,6 +10,8 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import re
 import librosa
+import os
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 # -------------------------
 # CONFIG
@@ -46,8 +48,9 @@ def extract_season(filepath: str):
     except Exception:
         return "Unknown"
 
-def get_label_file_for_embedding(filename: Path, lbl_dir: Path):
+def get_label_file_for_embedding(filename, lbl_dir: Path):
     """Match embedding file to correct label file by timestamp."""
+    filename = Path(filename)
     stem = filename.stem
     if ".wav_embeddings" in stem:
         wav_base = stem.split(".wav_embeddings")[0]
@@ -112,6 +115,7 @@ all_embeddings, all_times, all_click_labels, all_species_labels, all_filenames =
 
 for emb_file in EMB_DIR.glob("*.h5"):
     emb, times, filename = load_embeddings_file(emb_file)
+    print(f"Loaded embeddings from {filename}, shape: {emb.shape}")
     lbl_file = get_label_file_for_embedding(filename, LBL_DIR)
     if lbl_file is None or not lbl_file.exists(): 
         print(f"Skipping {emb_file.name}, no label file found")

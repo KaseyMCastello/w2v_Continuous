@@ -39,7 +39,6 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
-
 def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -844,7 +843,7 @@ class TSVFileDataset(Dataset):
         }
 
 
-def main(args):
+def main(args): 
     # TODO: Multi-GPU inference
     # TODO: Individual window length for each class
     # TODO: Individual metric thresholds for each class
@@ -870,7 +869,6 @@ def main(args):
     elif args.input_type == "tsv":
         dataset = TSVFileDataset(
             args.path,
-            root_dir=None,  # set if TSV paths are relative
             sample_rate=args.sample_rate,
             channel_info=args.channel_info,
         )

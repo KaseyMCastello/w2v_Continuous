@@ -1,7 +1,7 @@
 # @package _group_
 
 common:
-  fp16: true
+  fp16: false
   log_format: json
   log_interval: 384  # log every tenth of an epoch
   tensorboard_logdir: tb
@@ -11,17 +11,17 @@ common:
 
 checkpoint:
   save_interval: 2  # that is every 40840 updates
-  keep_last_epochs: 10  # keep all of them, as we train for 100 epochs
+  keep_last_epochs: 3  # keep all of them, as we train for 100 epochs
 
 task:
   _name: audio_ccas
-  data: /home/kcastello/Desktop/w2v_data/NFC_2018_Yr_5sChunk/manifest
+  data: /home/kcastello/Desktop/w2v_data/NFC_2018_Yr_3sChunk/NFC_2018_Yr_3sChunk/manifest
   unique_labels: "['Pmnoise', 'Gg', 'Delphinid', 'BWG', 'Zc', 'Me', 'Kogia', 'Mb', 'Echosounder', 'Mm', 'Md', 'focal']"
   # Change feature extractor for cetacea
   #0.5 ms token window => 2000 Hz goal window
   # 200000Hz / 5 /5 / 2 / 2 / 1 / 1 / 1 -> effective 2000 Hz sample rate
   # number of Sinc filters and kernel length is is n_sinc = k = sqrt( sr / 2 )
-  conv_feature_layers: '[(127, 201, 1)] +[(512, 10, 5)]*3 + [(512, 3, 2)] * 3 + [(512, 3, 1)] + [(512, 2, 1)] * 2'
+  conv_feature_layers: '[(127, 201, 1)] +[(512, 11, 5)]*2 + [(512, 3, 2)] * 2 + [(512, 3, 1)] + [(512, 2, 1)] * 2'
   min_sample_size: 1
   sample_rate: 200000
   normalize: true
@@ -30,7 +30,7 @@ task:
   enable_padding: false
 
 dataset:
-  num_workers: 32
+  num_workers: 4
   # max_tokens / sample_rate * distributed_world_size * update_freq is the batch size in seconds
   # For training on asmodeus, we use 960s for training, as in the paper
   max_tokens: 1_048_000  #  a token is a single audio frame
@@ -59,7 +59,7 @@ criterion:
     - masked_pct
 
 optimization:
-  update_freq: [ 2 ]  # Gradient accumulation steps
+  update_freq: [ 1 ]  # Gradient accumulation steps
   max_update: 930800  # 3842.3 updates are one epoch, so we train for 100 epochs
   clip_norm: 1
 
@@ -85,11 +85,11 @@ model:
   loss_beta: 0
   loss_scale: null
 
-  depth: 16
-  embed_dim: 1024
-  num_heads: 16
+  depth: 8
+  embed_dim: 512
+  num_heads: 8
 
-  clone_batch: 1
+  clone_batch: 12
 
   ema_decay: 0.9997
   ema_end_decay: 1

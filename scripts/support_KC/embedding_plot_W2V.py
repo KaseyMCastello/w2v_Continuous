@@ -24,6 +24,7 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 RANDOM_SEED = 42
 SUBSAMPLE = 5000  # number of points for click/no-click plots
 MAX_MARKER_SHAPES = 20
+desiredSpectrograms =3
 np.random.seed(RANDOM_SEED)
 
 # -------------------------
@@ -79,7 +80,7 @@ def build_clickNoClick_labels(emb_times, lbl_start, lbl_end):
 
 def assign_labels_to_embeddings(emb_times, lbl_start, lbl_end, lbl_vals):
     """Assign labels only if label interval fully falls within the embedding window."""
-    species_labels = np.zeros(len(emb_times), dtype=int)  # 0 = no-click
+    species_labels = np.array(["NoClick"]*len(emb_times))
     for start, end, sp in zip(lbl_start, lbl_end, lbl_vals):
         mask = (emb_times >= start) & (emb_times <= end)
         species_labels[mask] = sp
@@ -114,6 +115,7 @@ def plotly_3d(x, y, z, color=None, shape=None, title="plot", filename="plot.html
 # LOAD EMBEDDINGS + LABELS
 # -------------------------
 all_embeddings, all_times, all_click_labels, all_species_labels, all_filenames, all_seasons = [], [], [], [], [], []
+spectrogramCount=0
 
 for emb_file in EMB_DIR.glob("*.h5"):
     emb, emb_times, filename = load_embeddings_file(emb_file)
@@ -123,66 +125,63 @@ for emb_file in EMB_DIR.glob("*.h5"):
         continue
     #Determine which labels correspond to which embeddings
     lbl_starts, lbl_ends, lbl_vals = load_label_file(lbl_file)
-    print(lbl_vals)
-    sys.exit()
     click_noClick = build_clickNoClick_labels(emb_times, lbl_starts, lbl_ends)
     species_labels = assign_labels_to_embeddings(emb_times, lbl_starts, lbl_ends, lbl_vals)
     season = extract_season(filename)
 
+    # -------------------------
+    # PLOT 1: Combined Waveform+Spectrogram+Embedding Heatmap (first N files)
+    # -------------------------
+    if(spectrogramCount<desiredSpectrograms):
+        spectrogramCount+=1
+        wav_file = Path(filename)
+        filename_stem = wav_file.stem
+
+        # Load waveform & spectrogram
+        y, sr = librosa.load(wav_file, sr=None)
+        t_wav = np.arange(len(y))/sr
+        S = librosa.stft(y, n_fft=512, hop_length=256)
+        S_db = librosa.amplitude_to_db(np.abs(S), ref=np.max)
+        t_spec = np.arange(S_db.shape[1])*(256/sr)
+
+        fig = make_subplots(
+            rows=3, cols=1, shared_xaxes=True,
+            row_heights=[0.2,0.3,0.5],
+            vertical_spacing=0.02,
+            subplot_titles=("Waveform","Spectrogram","Embedding Heatmap")
+        )
+
+        # Waveform
+        fig.add_trace(go.Scatter(x=t_wav, y=y, name="Waveform", line=dict(color="black")), row=1, col=1)
+        # Spectrogram
+        fig.add_trace(go.Heatmap(z=S_db, x=t_spec, y=np.arange(S_db.shape[0]), colorscale="Viridis",
+                                colorbar=dict(title="dB")), row=2, col=1)
+        # Embedding heatmap
+        fig.add_trace(go.Heatmap(z=emb.T, x=emb_times, colorscale="Viridis",
+                                colorbar=dict(title="Embedding Value")), row=3, col=1)
+
+        fig.update_layout(
+            height=800, width=1200,
+            title=f"Waveform + Spectrogram + Embedding: {filename_stem}"
+        )
+        fig.update_xaxes(title_text="Time (s)", row=3, col=1)
+
+        out_file = OUTPUT_DIR / f"combined_{filename_stem}.html"
+        fig.write_html(out_file)
+        print(f"Saved combined plot: {out_file}")
+    
     all_embeddings.append(emb)
     all_times.append(emb_times)
     all_click_labels.append(click_noClick)
     all_species_labels.append(species_labels)
-    all_seasons.append(np.array([season]*len(emb)))
-    all_filenames.append(np.array([filename]*len(emb)))
+    all_filenames.append(filename)
+    all_seasons.extend([season]*len(emb))
 
-# Flatten all for UMAP/HDBSCAN
-embeddings_all = np.vstack(all_embeddings)
-clicks_all = np.concatenate(all_click_labels)
-species_all = np.concatenate(all_species_labels)
-seasons_all = np.concatenate(all_seasons)
-
-# -------------------------
-# PLOT 1: Combined Waveform+Spectrogram+Embedding Heatmap (first 3 files)
-# -------------------------
-for i in range(min(3,len(all_embeddings))):
-    emb = all_embeddings[i]
-    times_emb = all_times[i]
-    wav_file = Path(all_filenames[i][0])
-    filename_stem = wav_file.stem
-
-    # Load waveform & spectrogram
-    y, sr = librosa.load(wav_file, sr=None)
-    t_wav = np.arange(len(y))/sr
-    S = librosa.stft(y, n_fft=512, hop_length=256)
-    S_db = librosa.amplitude_to_db(np.abs(S), ref=np.max)
-    t_spec = np.arange(S_db.shape[1])*(256/sr)
-
-    fig = make_subplots(
-        rows=3, cols=1, shared_xaxes=True,
-        row_heights=[0.2,0.3,0.5],
-        vertical_spacing=0.02,
-        subplot_titles=("Waveform","Spectrogram","Embedding Heatmap")
-    )
-
-    # Waveform
-    fig.add_trace(go.Scatter(x=t_wav, y=y, name="Waveform", line=dict(color="black")), row=1, col=1)
-    # Spectrogram
-    fig.add_trace(go.Heatmap(z=S_db, x=t_spec, y=np.arange(S_db.shape[0]), colorscale="Viridis",
-                             colorbar=dict(title="dB")), row=2, col=1)
-    # Embedding heatmap
-    fig.add_trace(go.Heatmap(z=emb.T, x=times_emb, colorscale="Viridis",
-                             colorbar=dict(title="Embedding Value")), row=3, col=1)
-
-    fig.update_layout(
-        height=800, width=1200,
-        title=f"Waveform + Spectrogram + Embedding: {filename_stem}"
-    )
-    fig.update_xaxes(title_text="Time (s)", row=3, col=1)
-
-    out_file = OUTPUT_DIR / f"combined_{filename_stem}.html"
-    fig.write_html(out_file)
-    print(f"Saved combined plot: {out_file}")
+    # Flatten all for UMAP/HDBSCAN
+    embeddings_all = np.vstack(all_embeddings)
+    clicks_all = np.concatenate(all_click_labels)
+    species_all = np.concatenate(all_species_labels)
+    seasons_all = np.concatenate(all_seasons)
 
 # -------------------------
 # UMAP 3D
@@ -197,7 +196,7 @@ cluster_labels = clusterer.fit_predict(emb_3d)
 # -------------------------
 # 3D PLOTS
 # -------------------------
-plotly_3d(emb_3d[:,0], emb_3d[:,1], emb_3d[:,2], color=click_binary,
+plotly_3d(emb_3d[:,0], emb_3d[:,1], emb_3d[:,2], color=clicks_all,
           title="Click vs NoClick", filename=OUTPUT_DIR/"3d_clicks.html")
 
 # Season
@@ -209,7 +208,7 @@ plotly_3d(emb_3d[:,0], emb_3d[:,1], emb_3d[:,2], color=species_all,
           title="Species", filename=OUTPUT_DIR/"3d_species.html")
 
 # Cluster + Click
-plotly_3d(emb_3d[:,0], emb_3d[:,1], emb_3d[:,2], color=click_binary,
+plotly_3d(emb_3d[:,0], emb_3d[:,1], emb_3d[:,2], color=clicks_all,
           shape=cluster_labels % MAX_MARKER_SHAPES,  # max 20 shapes
           title="Cluster + Click", filename=OUTPUT_DIR/"3d_cluster_click.html")
 

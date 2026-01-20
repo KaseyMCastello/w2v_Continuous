@@ -46,9 +46,9 @@ def extract_season(filepath: str):
     except Exception:
         return "Unknown"
 
-def get_label_file_for_embedding(emb_file: Path, lbl_dir: Path):
+def get_label_file_for_embedding(filename: Path, lbl_dir: Path):
     """Match embedding file to correct label file by timestamp."""
-    stem = emb_file.stem
+    stem = filename.stem
     if ".wav_embeddings" in stem:
         wav_base = stem.split(".wav_embeddings")[0]
         lbl_file = lbl_dir / f"{wav_base}.h5"
@@ -111,12 +111,12 @@ def plotly_3d(x, y, z, color=None, shape=None, title="plot", filename="plot.html
 all_embeddings, all_times, all_click_labels, all_species_labels, all_filenames = [], [], [], [], []
 
 for emb_file in EMB_DIR.glob("*.h5"):
-    lbl_file = get_label_file_for_embedding(emb_file, LBL_DIR)
+    emb, times, filename = load_embeddings_file(emb_file)
+    lbl_file = get_label_file_for_embedding(filename, LBL_DIR)
     if lbl_file is None or not lbl_file.exists(): 
         print(f"Skipping {emb_file.name}, no label file found")
         continue
 
-    emb, times, filename = load_embeddings_file(emb_file)
     start_time, end_time, lbl_vals = load_label_file(lbl_file)
     click_labels = assign_labels_to_embeddings(times, start_time, end_time, lbl_vals)
     species_labels = click_labels.copy()

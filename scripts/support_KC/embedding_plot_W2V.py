@@ -12,13 +12,12 @@ import re
 import librosa
 import os
 import sys
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+
 
 # -------------------------
 # CONFIG
 # -------------------------
 EMB_DIR = Path("/home/kcastello/Code/animal2vec/outputs/inference_embs/hpf_0.5mstok_pretrain")
-LBL_DIR = Path("/home/kcastello/Desktop/w2v_data/NFC_2018_Yr_3sChunk/NFC_2018_Yr_3sChunk")
 OUTPUT_DIR = Path("/home/kcastello/Code/w2vPlotHelper/embedding_plots_html/hpf_0.5mstoken_pretrain")
 OUTPUT_DIR.mkdir(exist_ok=True)
 
@@ -55,7 +54,6 @@ def get_label_file_for_embedding(filename):
     label_path = label_path.replace(".wav", ".h5")
     return Path(label_path)
     
-
 def load_embeddings_file(h5_path):
     with h5py.File(h5_path, 'r') as f:
         emb = np.array(f['embedding'], dtype=np.float32)
@@ -71,14 +69,21 @@ def load_label_file(lbl_path):
     print(f"Loaded {len(lbl)} click labels from {lbl_path}")
     return start_time, end_time, lbl
 
+def build_clickNoClick_labels(emb_times, lbl_start, lbl_end):
+    """Determine which embedding sections contain clicks."""
+    click_labels = np.array(["NoClick"]*len(emb_times))
+    for start, end in zip(lbl_start, lbl_end):
+        mask = (emb_times >= start) & (emb_times <= end)
+        click_labels[mask] = "Click"
+    return click_labels
+
 def assign_labels_to_embeddings(emb_times, lbl_start, lbl_end, lbl_vals):
     """Assign labels only if label interval fully falls within the embedding window."""
-    labels = np.array(['NoClick']*len(emb_times), dtype=object)
-    for s, e, l in zip(lbl_start, lbl_end, lbl_vals):
-        # mark embeddings whose interval contains the label interval
-        idx = (s >= emb_times) & (e <= emb_times + 1)
-        labels[idx] = l
-    return labels
+    species_labels = np.zeros(len(emb_times), dtype=int)  # 0 = no-click
+    for start, end, sp in zip(lbl_start, lbl_end, lbl_vals):
+        mask = (emb_times >= start) & (emb_times <= end)
+        species_labels[mask] = sp
+    return species_labels
 
 def plotly_3d(x, y, z, color=None, shape=None, title="plot", filename="plot.html", subsample=None):
     if subsample is not None and len(x) > subsample:
@@ -108,29 +113,34 @@ def plotly_3d(x, y, z, color=None, shape=None, title="plot", filename="plot.html
 # -------------------------
 # LOAD EMBEDDINGS + LABELS
 # -------------------------
-all_embeddings, all_times, all_click_labels, all_species_labels, all_filenames = [], [], [], [], []
+all_embeddings, all_times, all_click_labels, all_species_labels, all_filenames, all_seasons = [], [], [], [], [], []
 
 for emb_file in EMB_DIR.glob("*.h5"):
-    emb, times, filename = load_embeddings_file(emb_file)
+    emb, emb_times, filename = load_embeddings_file(emb_file)
     lbl_file = get_label_file_for_embedding(filename)
     if lbl_file is None or not lbl_file.exists(): 
         print(f"Skipping {emb_file.name}, no label file found")
         continue
-
-    start_time, end_time, lbl_vals = load_label_file(lbl_file)
-    click_labels = assign_labels_to_embeddings(times, start_time, end_time, lbl_vals)
-    species_labels = click_labels.copy()
-    species_labels[click_labels=='NoClick'] = 'NoClick'
+    #Determine which labels correspond to which embeddings
+    lbl_starts, lbl_ends, lbl_vals = load_label_file(lbl_file)
+    print(lbl_vals)
+    sys.exit()
+    click_noClick = build_clickNoClick_labels(emb_times, lbl_starts, lbl_ends)
+    species_labels = assign_labels_to_embeddings(emb_times, lbl_starts, lbl_ends, lbl_vals)
+    season = extract_season(filename)
 
     all_embeddings.append(emb)
-    all_times.append(times)
-    all_click_labels.append(click_labels)
+    all_times.append(emb_times)
+    all_click_labels.append(click_noClick)
     all_species_labels.append(species_labels)
+    all_seasons.append(np.array([season]*len(emb)))
     all_filenames.append(np.array([filename]*len(emb)))
 
 # Flatten all for UMAP/HDBSCAN
 embeddings_all = np.vstack(all_embeddings)
-
+clicks_all = np.concatenate(all_click_labels)
+species_all = np.concatenate(all_species_labels)
+seasons_all = np.concatenate(all_seasons)
 
 # -------------------------
 # PLOT 1: Combined Waveform+Spectrogram+Embedding Heatmap (first 3 files)
@@ -187,22 +197,6 @@ cluster_labels = clusterer.fit_predict(emb_3d)
 # -------------------------
 # 3D PLOTS
 # -------------------------
-# Click vs NoClick
-clicks_all = np.array([
-    "Click" if np.any(lbls != "NoClick") else "NoClick"
-    for lbls in all_click_labels
-])
-
-species_all = np.array([
-    lbls[lbls != "NoClick"][0] if np.any(lbls != "NoClick") else "NoClick"
-    for lbls in all_species_labels
-])
-
-seasons_all = np.array([
-    extract_season(fns[0]) for fns in all_filenames
-])
-
-click_binary = (clicks_all != "NoClick").astype(str)
 plotly_3d(emb_3d[:,0], emb_3d[:,1], emb_3d[:,2], color=click_binary,
           title="Click vs NoClick", filename=OUTPUT_DIR/"3d_clicks.html")
 

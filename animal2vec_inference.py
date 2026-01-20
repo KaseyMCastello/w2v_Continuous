@@ -233,6 +233,13 @@ def get_parser():
         type=str,
         help="A string list that, when evaluated, holds the names for the used classes."
     )
+    parser.add_argument(
+    "--input-type",
+    type=str,
+    default="folder",
+    choices=["folder", "tsv"],
+    help="Input type: directory of wavs or TSV file listing wav paths",
+)
     return parser
 
 
@@ -798,6 +805,44 @@ class FileFolderDataset(Dataset):
         return {"id": index, "source": feats,
                 "filename": self.fnames[index]}
 
+class TSVFileDataset(Dataset):
+    def __init__(self, tsv_path, sample_rate=200000, channel_info=None):
+        self.sample_rate = sample_rate
+        self.channel_info = channel_info
+
+        with open(tsv_path, "r") as f:
+            lines = [l.strip() for l in f if l.strip()]
+
+        # Fairseq convention: first line is root
+        self.root = lines[0]
+
+        self.fnames = []
+        for line in lines[1:]:
+            rel_path = line.split("\t")[0]
+            self.fnames.append(os.path.join(self.root, rel_path))
+
+    def __len__(self):
+        return len(self.fnames)
+
+    def __getitem__(self, index):
+        fname = self.fnames[index]
+        wav, sr = sf.read(fname, dtype="float32")
+        feats = torch.from_numpy(wav).float()
+
+        if feats.dim() == 2:
+            feats = feats.mean(dim=1)
+
+        if sr != self.sample_rate:
+            feats = torchaudio.functional.resample(
+                feats, sr, self.sample_rate
+            )
+
+        return {
+            "id": index,
+            "source": feats,
+            "filename": fname,
+        }
+
 
 def main(args):
     # TODO: Multi-GPU inference
@@ -815,6 +860,20 @@ def main(args):
     # The labels on which the model was trained on
     unique_labels = eval(args.unique_values)
     # Create the dataset
+    if args.input_type == "folder":
+        dataset = FileFolderDataset(
+            args.path,
+            sample_rate=args.sample_rate,
+            channel_info=args.channel_info,
+        )
+
+    elif args.input_type == "tsv":
+        dataset = TSVFileDataset(
+            args.path,
+            root_dir=None,  # set if TSV paths are relative
+            sample_rate=args.sample_rate,
+            channel_info=args.channel_info,
+        )
     dataset = FileFolderDataset(args.path, sample_rate=args.sample_rate,
                                 channel_info=args.channel_info)
     # create the dataloader

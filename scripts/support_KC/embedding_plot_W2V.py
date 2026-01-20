@@ -114,7 +114,7 @@ def plotly_3d(x, y, z, color=None, shape=None, title="plot", filename="plot.html
 # -------------------------
 # LOAD EMBEDDINGS + LABELS
 # -------------------------
-all_embeddings, all_times, all_click_labels, all_species_labels, all_filenames, all_seasons = [], [], [], [], [], []
+all_embeddings, all_times, all_click_labels, all_species_labels, all_filenames, seasons_all = [], [], [], [], [], []
 spectrogramCount=0
 
 for emb_file in EMB_DIR.glob("*.h5"):
@@ -175,13 +175,14 @@ for emb_file in EMB_DIR.glob("*.h5"):
     all_click_labels.append(click_noClick)
     all_species_labels.append(species_labels)
     all_filenames.append(filename)
-    all_seasons.extend([season]*len(emb))
+    seasons_all.extend([season]*len(emb))
+    
 
-    # Flatten all for UMAP/HDBSCAN
-    embeddings_all = np.vstack(all_embeddings)
-    clicks_all = np.concatenate(all_click_labels)
-    species_all = np.concatenate(all_species_labels)
-    seasons_all = np.concatenate(all_seasons)
+# Flatten all for UMAP/HDBSCAN
+embeddings_all = np.vstack(all_embeddings)
+clicks_all = np.concatenate(all_click_labels)
+species_all = np.concatenate(all_species_labels)
+
 
 # -------------------------
 # UMAP 3D

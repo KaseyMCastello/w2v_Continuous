@@ -872,8 +872,7 @@ def main(args):
             sample_rate=args.sample_rate,
             channel_info=args.channel_info,
         )
-    dataset = FileFolderDataset(args.path, sample_rate=args.sample_rate,
-                                channel_info=args.channel_info)
+    
     # create the dataloader
     dataloader = DataLoader(dataset,
                             batch_size=1,  # One file at a time

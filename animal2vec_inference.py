@@ -535,7 +535,7 @@ def export_embeddings(model, layer_results):
         finetuned = True
 
     if finetuned:
-        target_layer_results = [l[0] for l in layer_results[-avg_layer:]]
+        target_layer_results = [l for l in layer_results[-avg_layer:]]
     else:
         target_layer_results = [l for l in layer_results[-avg_layer:]]
 

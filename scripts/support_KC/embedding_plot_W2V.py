@@ -17,8 +17,8 @@ import sys
 # -------------------------
 # CONFIG
 # -------------------------
-EMB_DIR = Path("/home/kcastello/Code/animal2vec/outputs/inference_embs/hpf_0.5mstok_pretrain")
-OUTPUT_DIR = Path("/home/kcastello/Code/w2vPlotHelper/embedding_plots_html/hpf_0.5mstoken_pretrain")
+EMB_DIR = Path("/home/kcastello/Code/animal2vec/outputs/inference_embs/hpf_0.5mstok_finetune")
+OUTPUT_DIR = Path("/home/kcastello/Code/w2vPlotHelper/embedding_plots_html/hpf_0.5mstoken_finetune")
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 RANDOM_SEED = 42

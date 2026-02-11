@@ -20,6 +20,7 @@ task:
   data: /path/to/manifest_files
   max_sample_size: 320000
   min_sample_size: 1000
+  hp_cutoff_freq: 4000.0
   min_label_size: 3032  # Empty label files have Bytesize 1780, so to exclude them set this to 1780
   normalize: true
   sample_rate: 8000

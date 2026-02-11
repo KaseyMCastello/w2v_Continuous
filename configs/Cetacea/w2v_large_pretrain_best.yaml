@@ -1,40 +1,44 @@
 # @package _group_
 
 common:
-  fp16: false
+  fp16: true
   log_format: json
-  log_interval: 150  # log every tenth of an epoch
+  log_interval: 384  # log every tenth of an epoch
   tensorboard_logdir: tb
-  min_loss_scale: 1e-6
+  min_loss_scale: 1e-10
   fp16_no_flatten_grads: true
   fp16_init_scale: 1
 
 checkpoint:
-  save_interval: 5  # that is every 5*1500 updates
-  keep_last_epochs: 25  # keep all of them, as we train for 100 epochs
+  save_interval: 10  # that is every 40840 updates
+  keep_last_epochs: 10  # keep all of them, as we train for 100 epochs
 
 task:
   _name: audio_ccas
-  data: /home/kcastello/Desktop/w2v_data/NFC_2018_Yr_3sChunk/NFC_2018_Yr_3sChunk/manifest
-  unique_labels: "['Pmnoise', 'Gg', 'Delphinid', 'BWG', 'Zc', 'Me', 'Kogia', 'Mb', 'Echosounder', 'Mm', 'Md', 'focal']"
-  # Change feature extractor for cetacea
-  #0.25 ms token window => 4000 Hz goal window
-  # 200000Hz / 5 /5 / 2  / 1 / 1 / 1 -> effective 4000 Hz sample rate
+  data: D:\Data\Cetacean\Cont_Tiny\manifest
+  unique_labels: "['Pmnoise', 'Gg', 'Delphinid']"
+  # Change feature extractor for MeerKAT
+  # 8000Hz / 5 / 2 / 2 / 2 / 1 / 1 / 1 -> Effective encoder output frequency of 200Hz.
   # number of Sinc filters and kernel length is is n_sinc = k = sqrt( sr / 2 )
-  conv_feature_layers: '[(317, 201, 1)] +[(512, 10, 5)]*2 + [(512, 3, 2)] * 1 + [(512, 3, 1)] + [(512, 2, 1)] * 2'
+  # 63 filters times 127 Hz resolution each is 8000Hz
+  # [(127, 63, 1)] + [(512, 10, 5)] + [(512, 3, 2)] * 2 + [(512, 3, 1)] + [(512, 2, 1)] * 2
+
+
+
+  #Note to Kasey: didn't change these yet, just trying to get it to run. Recalculate what will make 200 sample tokens in the end.
+  conv_feature_layers: '[(127, 63, 1)] +[(512, 10, 5)] *2 + [(512, 3, 2)] * 3 + [(512, 3, 1)] + [(512, 2, 1)] * 2'
   min_sample_size: 1
   sample_rate: 200000
-  hp_cutoff_freq: 4000.0
   normalize: true
   with_labels: false
   verbose_tensorboard_logging: false
   enable_padding: false
 
 dataset:
-  num_workers: 8 #Reduce for smaller available GPU
+  num_workers: 16
   # max_tokens / sample_rate * distributed_world_size * update_freq is the batch size in seconds
   # For training on asmodeus, we use 960s for training, as in the paper
-  max_tokens: 648_000  #  a token is a single audio frame
+  max_tokens: 408_000  #  a token is a single audio frame
   skip_invalid_size_inputs_valid_test: true
   validate_interval: 25
   validate_interval_updates: 10000  # validate every m updates
@@ -45,7 +49,7 @@ dataset:
 
 distributed_training:
   distributed_world_size: 1  # Number of GPUs
-  #ddp_backend: legacy_ddp #commented out for 1GPU runs
+  ddp_backend: legacy_ddp
 
 criterion:
   _name: expanded_model
@@ -60,7 +64,7 @@ criterion:
     - masked_pct
 
 optimization:
-  update_freq: [ 8 ]  # Gradient accumulation steps
+  update_freq: [ 2 ]  # Gradient accumulation steps
   max_update: 384230  # 3842.3 updates are one epoch, so we train for 100 epochs
   clip_norm: 1
 
@@ -69,7 +73,7 @@ optimizer:
   dynamic_groups: true
   groups:
     default:
-      lr_float: 3e-5
+      lr_float: 0.00001
       optimizer:
         _name: adam
         adam_betas: [ 0.9,0.98 ]
@@ -87,7 +91,7 @@ model:
   loss_scale: null
 
   depth: 16
-  embed_dim: 1024
+  embed_dim: 256
   num_heads: 16
 
   clone_batch: 12

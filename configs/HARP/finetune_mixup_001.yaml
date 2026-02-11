@@ -23,6 +23,7 @@ task:
   min_label_size: 3032  # Empty label files have Bytesize 1780, so to exclude them set this to 1780
   normalize: true
   sample_rate: 8000
+  hp_cutoff_freq: 4000.0
   with_labels: true
   unique_labels: "['beep', 'synch', 'sn', 'cc', 'ld', 'oth', 'mo', 'al', 'soc', 'agg', 'eating', 'focal']"
   conv_feature_layers: '[(127, 63, 1)] +[(512, 10, 5)] + [(512, 3, 2)] * 3 + [(512, 3, 1)] + [(512, 2, 1)] * 2'

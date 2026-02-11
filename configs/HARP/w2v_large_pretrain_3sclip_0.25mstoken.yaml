@@ -24,6 +24,7 @@ task:
   conv_feature_layers: '[(317, 201, 1)] +[(512, 10, 5)]*2 + [(512, 3, 2)] * 1 + [(512, 3, 1)] + [(512, 2, 1)] * 2'
   min_sample_size: 1
   sample_rate: 200000
+  hp_cutoff_freq: 4000.0
   normalize: true
   with_labels: false
   verbose_tensorboard_logging: false

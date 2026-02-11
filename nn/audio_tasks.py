@@ -76,6 +76,10 @@ class AudioConfigCCAS(AudioPretrainingConfig):
         metadata={"help": "a 'string list' of all the unique labels."
                           "Only used when with_labels is True"},
     )
+    hp_cutoff_freq: float = field(
+        default=4000.0,
+        metadata={"help": "highpass filter cutoff frequency in Hz"},
+    )
     conv_feature_layers: str = field(
         default='[(63, 125, 1)] +[(512, 10, 5)] + [(512, 3, 2)] * 3 + [(512, 3, 1)] + [(512, 2, 1)] * 2',
         metadata={
@@ -330,7 +334,7 @@ class FileAudioLabelDataset(RawAudioDataset, ABC):
         wav, curr_sample_rate = sf.read(path_or_fp, dtype="float32")
 
         #Try high-pass filtering to remove low freq noise
-        hp_cutoff = 4000.0  # Hz
+        hp_cutoff = self.cfg.hp_cutoff_freq
         nyq = 0.5 * curr_sample_rate
         wn = hp_cutoff / nyq
         b, a = butter(N=4, Wn=wn, btype="highpass")

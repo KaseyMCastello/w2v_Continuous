@@ -21,6 +21,7 @@ task:
   data: /home/kcastello/Desktop/w2v_data/NFC_2018_Yr_3sChunk/NFC_2018_Yr_3sChunk/manifest
   max_sample_size: 3200000
   min_sample_size: 1
+  hp_cutoff_freq: 4000.0
   min_label_size: 3032  # Empty label files have Bytesize 1780, so to exclude them set this to 1780
   normalize: true
   sample_rate: 200000

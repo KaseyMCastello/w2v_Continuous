@@ -127,6 +127,8 @@ class AudioTaskCCAS(AudioPretrainingTask):
         do_focal_prediction = getattr(task_cfg, "do_focal_prediction")
         return_labels = getattr(task_cfg, "with_labels")
         min_label_size = getattr(task_cfg, "min_label_size")
+        hp_cutoff_freq = getattr(task_cfg, "hp_cutoff_freq")
+        
 
         self.datasets[split] = FileAudioLabelDataset(
             manifest_path=manifest_path,
@@ -145,6 +147,7 @@ class AudioTaskCCAS(AudioPretrainingTask):
             conv_feature_layers=task_cfg.conv_feature_layers,
             segmentation_metrics=self.segmentation_metrics,
             do_focal_prediction=do_focal_prediction,
+            hp_cutoff_freq=hp_cutoff_freq
             # **self._get_mask_precompute_kwargs(task_cfg),
         )
 
@@ -217,6 +220,7 @@ class FileAudioLabelDataset(RawAudioDataset, ABC):
             min_label_size=0,
             segmentation_metrics=None,
             do_focal_prediction=True,
+            hp_cutoff_freq = 4000,
             **mask_compute_kwargs,
     ):
         super().__init__(
@@ -292,6 +296,7 @@ class FileAudioLabelDataset(RawAudioDataset, ABC):
         self.segmentation_metrics = segmentation_metrics
         self.return_labels = return_labels
         self.conv_feature_layers = eval(conv_feature_layers)
+        self.hp_cutoff_freq = hp_cutoff_freq
 
     # Used to transform audio file path to label file path
     # Assumes that audio is in a "wav" directory, file extension can be arbitrary (e.g., .flac)
@@ -334,7 +339,7 @@ class FileAudioLabelDataset(RawAudioDataset, ABC):
         wav, curr_sample_rate = sf.read(path_or_fp, dtype="float32")
 
         #Try high-pass filtering to remove low freq noise
-        hp_cutoff = self.cfg.hp_cutoff_freq
+        hp_cutoff = self.hp_cutoff_freq
         nyq = 0.5 * curr_sample_rate
         wn = hp_cutoff / nyq
         b, a = butter(N=4, Wn=wn, btype="highpass")

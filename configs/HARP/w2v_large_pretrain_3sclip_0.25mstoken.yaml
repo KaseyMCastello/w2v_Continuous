@@ -15,7 +15,7 @@ checkpoint:
 
 task:
   _name: audio_ccas
-  data: /home/kcastello/Desktop/w2v_data/NFC_2018_Yr_3sChunk/NFC_2018_Yr_3sChunk
+  data: /home/kcastello/Desktop/w2v_data/NFC_2018_Yr_3sChunk/NFC_2018_Yr_3sChunk/manifest
   unique_labels: "['Pmnoise', 'Gg', 'Delphinid', 'BWG', 'Zc', 'Me', 'Kogia', 'Mb', 'Echosounder', 'Mm', 'Md', 'focal']"
   # Change feature extractor for cetacea
   #0.25 ms token window => 4000 Hz goal window
@@ -90,7 +90,7 @@ model:
   embed_dim: 1024
   num_heads: 16
 
-  clone_batch: 12
+  clone_batch: 1
 
   ema_decay: 0.9997
   ema_end_decay: 1

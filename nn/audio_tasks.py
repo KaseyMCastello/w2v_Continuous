@@ -47,7 +47,7 @@ class AudioConfigCCAS(AudioPretrainingConfig):
         },
     )
     do_focal_prediction: bool = field(
-        default=True,
+        default=False,
         metadata={"help": "if set, try to predict if the vocalization was 'focal' or not."
                           "That is, being issued by the animal that is tracked (focal) or by a"
                           "nearby animal (non focal)."},

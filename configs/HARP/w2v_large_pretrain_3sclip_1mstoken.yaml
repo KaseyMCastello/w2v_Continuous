@@ -50,7 +50,7 @@ distributed_training:
 criterion:
   _name: expanded_model
   segmentation_metrics: true
-  use_focal_loss: true  # this overrides label smoothing and uses the focal loss instead
+  use_focal_loss: False  # this overrides label smoothing and uses the focal loss instead
   log_keys:
     - ema_decay
     - target_var
@@ -69,7 +69,7 @@ optimizer:
   dynamic_groups: true
   groups:
     default:
-      lr_float: 3e-5
+      lr_float: 1e-5
       optimizer:
         _name: adam
         adam_betas: [ 0.9,0.98 ]
@@ -77,7 +77,7 @@ optimizer:
         weight_decay: 0.01
       lr_scheduler:
         _name: cosine
-        warmup_updates: 10000
+        warmup_updates: 1000
 
 lr_scheduler: pass_through
 
@@ -125,7 +125,7 @@ model:
       prenet_depth: 8  # The depth of the transformer based context_encoder
       # mask_prob: 0.5
       # mask_length: 5
-      mask_prob: 1.5  # Probability for a token being masked (Default is 0.65)
+      mask_prob: 0.65  # Probability for a token being masked (Default is 0.65)
       # The masking length if a token was chosen.
       # This mask_prob and mask_length will mask ~93% of the input with a median masking length of 70 ms
       mask_length: 2

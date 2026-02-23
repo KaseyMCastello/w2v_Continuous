@@ -876,7 +876,7 @@ def main(args):
     # create the dataloader
     dataloader = DataLoader(dataset,
                             batch_size=1,  # One file at a time
-                            shuffle=False)
+                            shuffle=True)
 
     model_path = args.model_path
     assert os.path.isfile(model_path)

@@ -3,7 +3,7 @@
 common:
   fp16: false
   log_format: json
-  log_interval: 150  # log every tenth of an epoch
+  log_interval: 1500 # log every tenth of an epoch
   tensorboard_logdir: tb
   min_loss_scale: 1e-6
   fp16_no_flatten_grads: true
@@ -61,7 +61,7 @@ criterion:
 
 optimization:
   update_freq: [ 4 ]  # Gradient accumulation steps
-  max_update: 384230  # 3842.3 updates are one epoch, so we train for 100 epochs
+  max_update: 3243200  #32432 updates are one epoch, so we train for 100 epochs
   clip_norm: 1
 
 optimizer:
@@ -90,7 +90,7 @@ model:
   embed_dim: 1024
   num_heads: 16
 
-  clone_batch: 2
+  clone_batch: 3
 
   ema_decay: 0.9997
   ema_end_decay: 1
@@ -125,7 +125,7 @@ model:
       prenet_depth: 8  # The depth of the transformer based context_encoder
       # mask_prob: 0.5
       # mask_length: 5
-      mask_prob: 0.65  # Probability for a token being masked (Default is 0.65)
+      mask_prob: 0.45  # Probability for a token being masked (Default is 0.65)
       # The masking length if a token was chosen.
       # This mask_prob and mask_length will mask ~93% of the input with a median masking length of 70 ms
       mask_length: 2

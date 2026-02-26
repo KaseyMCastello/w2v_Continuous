@@ -12,6 +12,7 @@ common:
 checkpoint:
   save_interval: 1  # that is every 5*1500 updates
   keep_last_epochs: 25  # keep all of them, as we train for 100 epochs
+  save_dir: /home/kcastello/data/w2v_Cont_ModelOutputs
 
 task:
   _name: audio_ccas

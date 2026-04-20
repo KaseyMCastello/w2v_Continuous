@@ -17,8 +17,8 @@ import sys
 # -------------------------
 # CONFIG
 # -------------------------
-EMB_DIR = Path("/home/kcastello/Code/animal2vec/outputs/inference_embs/hpf_0.5mstok_finetune")
-OUTPUT_DIR = Path("/home/kcastello/Code/w2vPlotHelper/embedding_plots_html/hpf_0.5mstoken_finetune")
+EMB_DIR = Path("/home/kcastello/data/w2v_Cont_ModelOutputs/Inference/pretrain_1mstoken_4khpf_e13")
+OUTPUT_DIR = Path("/home/kcastello/data/w2v_Cont_ModelOutputs/Inference/pretrain_1mstoken_4khpf_e13/plots")
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 RANDOM_SEED = 42
@@ -237,5 +237,46 @@ df_stack = pd.DataFrame(hist_data).fillna(0)
 fig = df_stack.plot(kind='bar', stacked=True, figsize=(12,6), colormap='tab20')
 fig.figure.savefig(OUTPUT_DIR/"hdbscan_cluster_hist.png")
 print(f"Saved HDBSCAN cluster histogram: {OUTPUT_DIR/'hdbscan_cluster_hist.png'}")
+
+# -------------------------
+# FILTER: clicks only (exclude NoClick)
+# -------------------------
+click_mask = clicks_all != "NoClick"
+
+emb_3d_clicks = emb_3d[click_mask]
+clicks_only = clicks_all[click_mask]
+species_clicks = species_all[click_mask]
+seasons_clicks = np.array(seasons_all)[click_mask]
+cluster_labels_clicks = cluster_labels[click_mask]
+
+# -------------------------
+# 3D PLOTS
+# -------------------------
+plotly_3d(emb_3d_clicks[:,0], emb_3d_clicks[:,1], emb_3d_clicks[:,2], color=clicks_only,
+          title="Click vs NoClick", filename=OUTPUT_DIR/"3d_clicks_co.html")
+
+# Season
+plotly_3d(emb_3d_clicks[:,0], emb_3d_clicks[:,1], emb_3d_clicks[:,2], color=seasons_clicks,
+          title="Season", filename=OUTPUT_DIR/"3d_season_co.html")
+
+# Species
+plotly_3d(emb_3d_clicks[:,0], emb_3d_clicks[:,1], emb_3d_clicks[:,2], color=species_clicks,
+          title="Species", filename=OUTPUT_DIR/"3d_species_co.html")
+
+
+# Cluster + Click
+plotly_3d(emb_3d_clicks[:,0], emb_3d_clicks[:,1], emb_3d_clicks[:,2], color=clicks_only,
+          shape=cluster_labels_clicks % MAX_MARKER_SHAPES,  # max 20 shapes
+          title="Cluster + Click", filename=OUTPUT_DIR/"3d_cluster_click_co.html")
+
+# Cluster + Species
+plotly_3d(emb_3d_clicks[:,0], emb_3d_clicks[:,1], emb_3d_clicks[:,2], color=species_clicks,
+          shape=cluster_labels_clicks % MAX_MARKER_SHAPES,
+          title="Cluster + Species", filename=OUTPUT_DIR/"3d_cluster_species_co.html")
+
+# Cluster + Season
+plotly_3d(emb_3d_clicks[:,0], emb_3d_clicks[:,1], emb_3d_clicks[:,2], color=seasons_clicks,
+          shape=cluster_labels_clicks % MAX_MARKER_SHAPES,
+          title="Cluster + Season", filename=OUTPUT_DIR/"3d_cluster_season_co.html")
 
 print("All plots saved.")

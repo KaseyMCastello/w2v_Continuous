@@ -2,7 +2,7 @@
 hydra:
   run:
     #dir: outputs/${now:%Y-%m-%d_%H-%M-%S}_ft_full-0_65-4
-    dir: /home/kcastello/Code/animal2vec/outputs/2026-01-19_18-59-05_ft_full-0_65-4
+    dir: /home/kcastello/data/w2v_Cont_ModelOutputs/finetune_test_2272026_1mstok_ep4
 
 common:
   fp16: false
@@ -27,7 +27,7 @@ task:
   sample_rate: 200000
   with_labels: true
   unique_labels: "['Pmnoise', 'Gg', 'Delphinid', 'BWG', 'Zc', 'Me', 'Kogia', 'Mb', 'Echosounder', 'Mm', 'Md', 'focal']"
-  conv_feature_layers: '[(127, 201, 1)] +[(512, 11, 5)]*2 + [(512, 3, 2)] * 2 + [(512, 3, 1)] + [(512, 2, 1)] * 2'
+  conv_feature_layers: '[(317, 201, 1)] +[(512, 10, 5)]*2 + [(512, 3, 2)] * 3 + [(512, 3, 1)] + [(512, 2, 1)] * 2'
   verbose_tensorboard_logging: true
 
 dataset:
@@ -45,7 +45,7 @@ dataset:
   valid_subset: valid_0
 
 distributed_training:
-  distributed_world_size: 4  # num of gpus -> we have 4
+  distributed_world_size: 1  # num of gpus -> we have 4
   ddp_backend: legacy_ddp
 
 criterion:
@@ -54,7 +54,7 @@ criterion:
   report_accuracy: true
   segmentation_metrics: true
   use_focal_loss: true  # this overrides label smoothing and uses the focal loss instead
-  metric_threshold: .01  # The minimum likelihood which is deemed a prediction
+  metric_threshold: .2  # The minimum likelihood which is deemed a prediction
   method: "avg"  # Parameters for the segmentation detection
   sigma_s: 0.1
   maxfilt_s: 0.1
@@ -79,7 +79,7 @@ lr_scheduler:
 
 model:
   _name: wav2vec_ccas_finetune
-  w2v_path: /home/kcastello/Code/animal2vec/outputs/2026-01-14/hpf_0.5mstoken/checkpoints/checkpoint_last.pt
+  w2v_path: /home/kcastello/data/w2v_Cont_ModelOutputs/pretrain_test_2272026_1mstok/checkpoint_last.pt
   # For the first 10k updates only the output classifier is trained,
   # after which the Transformer is also updated.
   # The feature encoder is not trained during fine-tuning.

@@ -1,7 +1,10 @@
 # @package _group_
+hydra:
+  run:
+    dir: /home/kcastello/data/w2v_Cont_ModelOutputs/pretrain_test_2272026_025mstok
 
 common:
-  fp16: false
+  fp16: true
   log_format: json
   log_interval: 150  # log every tenth of an epoch
   tensorboard_logdir: tb
@@ -21,7 +24,7 @@ task:
   #0.25 ms token window => 4000 Hz goal window
   # 200000Hz / 5 /5 / 2  / 1 / 1 / 1 -> effective 4000 Hz sample rate
   # number of Sinc filters and kernel length is is n_sinc = k = sqrt( sr / 2 )
-  conv_feature_layers: '[(317, 201, 1)] +[(512, 10, 5)]*2 + [(512, 3, 2)] * 1 + [(512, 3, 1)] + [(512, 2, 1)] * 2'
+  conv_feature_layers: '[(207, 201, 1)] +[(256, 10, 5)]*2 + [(256, 3, 2)] * 1 + [(256, 3, 1)] + [(256, 2, 1)] * 2'
   min_sample_size: 1
   sample_rate: 200000
   hp_cutoff_freq: 4000.0
@@ -31,7 +34,7 @@ task:
   enable_padding: false
 
 dataset:
-  num_workers: 8 #Reduce for smaller available GPU
+  num_workers: 1 #Reduce for smaller available GPU
   # max_tokens / sample_rate * distributed_world_size * update_freq is the batch size in seconds
   # For training on asmodeus, we use 960s for training, as in the paper
   max_tokens: 648_000  #  a token is a single audio frame
@@ -60,7 +63,7 @@ criterion:
     - masked_pct
 
 optimization:
-  update_freq: [ 8 ]  # Gradient accumulation steps
+  update_freq: [ 4 ]  # Gradient accumulation steps
   max_update: 384230  # 3842.3 updates are one epoch, so we train for 100 epochs
   clip_norm: 1
 
@@ -142,7 +145,7 @@ model:
       learned_alibi_scale_per_head: true
       decoder:
         input_dropout: 0.1
-        decoder_dim: 768
+        decoder_dim: 512
         decoder_groups: 16
         decoder_kernel: 7
         decoder_layers: 4
